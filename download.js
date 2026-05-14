@@ -18,23 +18,22 @@ const client = new TelegramClient(
 );
 
 const links = [
-    "https://t.me/c/3199042265/9",
-    "https://t.me/c/3199042265/10",
-    "https://t.me/c/3199042265/11",
-    "https://t.me/c/3199042265/12",
-    "https://t.me/c/3199042265/13",
-    "https://t.me/c/3199042265/14",
-    "https://t.me/c/3199042265/15",
-    "https://t.me/c/3199042265/16",
-    "https://t.me/c/3199042265/17",
-    "https://t.me/c/3199042265/18",
-    "https://t.me/c/3199042265/19",
-    "https://t.me/c/3199042265/20"
+    "https://t.me/c/3199042265/22",
+    "https://t.me/c/3199042265/23",
+    "https://t.me/c/3199042265/24",
+    "https://t.me/c/3199042265/25",
+    "https://t.me/c/3199042265/26",
+    "https://t.me/c/3199042265/27",
+    "https://t.me/c/3199042265/28",
+    "https://t.me/c/3199042265/29",
+    "https://t.me/c/3199042265/30",
+    "https://t.me/c/3199042265/31",
+    "https://t.me/c/3199042265/32",
+    "https://t.me/c/3199042265/33",
 ];
 
 function parseLink(link) {
     const url = new URL(link);
-
     const parts = url.pathname.split("/").filter(Boolean);
 
     return {
@@ -44,21 +43,25 @@ function parseLink(link) {
 }
 
 async function main() {
-    await client.connect();
 
+    await client.connect();
     console.log("connected");
 
     fs.mkdirSync("downloads", { recursive: true });
 
     for (const link of links) {
+
         try {
+
             const { chatId, messageId } = parseLink(link);
 
             console.log(`processing ${link}`);
 
-            const msg = await client.getMessages(chatId, {
+            const messages = await client.getMessages(chatId, {
                 ids: messageId,
             });
+
+            const msg = messages[0];
 
             if (!msg) {
                 console.log("message not found");
@@ -74,15 +77,9 @@ async function main() {
                 msg.file?.name ||
                 `file_${messageId}`;
 
-            const safeName = originalName.replace(
-                /[\\/:*?"<>|]/g,
-                "_"
-            );
+            const safeName = originalName.replace(/[\\/:*?"<>|]/g, "_");
 
-            const outputPath = path.join(
-                "downloads",
-                safeName
-            );
+            const outputPath = path.join("downloads", safeName);
 
             if (fs.existsSync(outputPath)) {
                 console.log(`already exists: ${safeName}`);
@@ -96,9 +93,12 @@ async function main() {
             });
 
             console.log(`saved -> ${outputPath}`);
+
         } catch (err) {
+
             console.error(`failed: ${link}`);
             console.error(err);
+
         }
     }
 
