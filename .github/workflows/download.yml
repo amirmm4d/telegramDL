@@ -1,44 +1,35 @@
-name: Download Telegram Files
+name: telegram-download
 
 on:
     workflow_dispatch:
-
-    schedule:
-        - cron: "0 */6 * * *"
-
-permissions:
-    contents: write
 
 jobs:
     download:
         runs-on: ubuntu-latest
 
         steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+            - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
+            - uses: actions/setup-node@v4
               with:
                   node-version: 20
 
-            - name: Install dependencies
-              run: npm install
+            - run: npm install
 
             - name: Run downloader
-              env:
-                  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
               run: node download.js
+              env:
+                  TG_API_ID: ${{ secrets.TG_API_ID }}
+                  TG_API_HASH: ${{ secrets.TG_API_HASH }}
+                  TG_SESSION: ${{ secrets.TG_SESSION }}
 
-            - name: Commit downloaded files
+            - name: Commit files
               run: |
-                  git config user.name "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-                  mkdir -p downloads
+                  git config user.name github-actions
+                  git config user.email github-actions@github.com
 
                   git add downloads
 
-                  git diff --cached --quiet || git commit -m "Add Telegram downloaded files"
+                  git diff --cached --quiet || git commit -m "telegram files"
 
                   git push
