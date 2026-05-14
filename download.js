@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 
 import { TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
@@ -33,8 +34,12 @@ const links = [
 ];
 
 function parseLink(link) {
+
     const url = new URL(link);
-    const parts = url.pathname.split("/").filter(Boolean);
+
+    const parts = url.pathname
+        .split("/")
+        .filter(Boolean);
 
     return {
         chatId: Number(`-100${parts[1]}`),
@@ -42,24 +47,57 @@ function parseLink(link) {
     };
 }
 
+function gitCommit(filePath, fileName) {
+
+    try {
+
+        execSync(`git add "${filePath}"`, {
+            stdio: "inherit",
+        });
+
+        execSync(
+            `git commit -m "add ${fileName}"`,
+            {
+                stdio: "inherit",
+            }
+        );
+
+        execSync(`git push`, {
+            stdio: "inherit",
+        });
+
+        console.log(`committed ${fileName}`);
+
+    } catch (err) {
+
+        console.log(`nothing to commit for ${fileName}`);
+
+    }
+}
+
 async function main() {
 
     await client.connect();
+
     console.log("connected");
 
-    fs.mkdirSync("downloads", { recursive: true });
+    fs.mkdirSync("downloads", {
+        recursive: true,
+    });
 
     for (const link of links) {
 
         try {
 
-            const { chatId, messageId } = parseLink(link);
+            const { chatId, messageId } =
+                parseLink(link);
 
             console.log(`processing ${link}`);
 
-            const messages = await client.getMessages(chatId, {
-                ids: messageId,
-            });
+            const messages =
+                await client.getMessages(chatId, {
+                    ids: messageId,
+                });
 
             const msg = messages[0];
 
@@ -77,22 +115,39 @@ async function main() {
                 msg.file?.name ||
                 `file_${messageId}`;
 
-            const safeName = originalName.replace(/[\\/:*?"<>|]/g, "_");
+            const safeName =
+                originalName.replace(
+                    /[\\/:*?"<>|]/g,
+                    "_"
+                );
 
-            const outputPath = path.join("downloads", safeName);
+            const outputPath = path.join(
+                "downloads",
+                safeName
+            );
 
             if (fs.existsSync(outputPath)) {
-                console.log(`already exists: ${safeName}`);
+
+                console.log(
+                    `already exists: ${safeName}`
+                );
+
                 continue;
             }
 
-            console.log(`downloading ${safeName}`);
+            console.log(
+                `downloading ${safeName}`
+            );
 
             await client.downloadMedia(msg, {
                 outputFile: outputPath,
             });
 
-            console.log(`saved -> ${outputPath}`);
+            console.log(
+                `saved -> ${outputPath}`
+            );
+
+            gitCommit(outputPath, safeName);
 
         } catch (err) {
 
