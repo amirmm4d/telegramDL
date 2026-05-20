@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
 
 import { TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
@@ -24,14 +23,6 @@ function parseLink(link) {
         chatId: Number(`-100${parts[1]}`),
         messageId: Number(parts[2]),
     };
-}
-
-function gitCommit() {
-    try {
-        execSync(`git add downloads links.txt`, { stdio: "inherit" });
-        execSync(`git commit -m "download telegram files"`, { stdio: "inherit" });
-        execSync(`git push`, { stdio: "inherit" });
-    } catch { }
 }
 
 async function main() {
@@ -94,8 +85,6 @@ async function main() {
             changed = true;
 
             fs.writeFileSync("links.txt", lines.join("\n"));
-
-            gitCommit();
 
         } catch (err) {
             console.log("failed", line);

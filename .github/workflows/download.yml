@@ -24,14 +24,64 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Setup git
-              run: |
-                  git config --global user.name "github-actions"
-                  git config --global user.email "github-actions@github.com"
-
             - name: Run downloader
               run: node download.js
               env:
                   TG_API_ID: ${{ secrets.TG_API_ID }}
                   TG_API_HASH: ${{ secrets.TG_API_HASH }}
                   TG_SESSION: ${{ secrets.TG_SESSION }}
+
+            - name: Count downloaded files
+              id: count
+              run: |
+                  n=$(find downloads -type f 2>/dev/null | wc -l | tr -d ' ')
+                  echo "count=$n" >> "$GITHUB_OUTPUT"
+                  echo "Downloaded file count: $n"
+
+            - name: Ensure downloads/ is never tracked by git
+              if: steps.count.outputs.count != '0'
+              run: |
+                  set -euo pipefail
+                  while IFS= read -r -d '' f; do
+                    if ! git check-ignore -q "$f"; then
+                      echo "downloads/ must stay gitignored (refusing to proceed): $f"
+                      exit 1
+                    fi
+                  done < <(find downloads -type f -print0)
+
+            - name: Delete existing latest release
+              if: steps.count.outputs.count != '0'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  set -euo pipefail
+                  if gh release view latest >/dev/null 2>&1; then
+                    gh release delete latest --yes --cleanup-tag
+                  fi
+
+            - name: Create release and upload assets
+              if: steps.count.outputs.count != '0'
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: latest
+                  name: Latest
+                  generate_release_notes: false
+                  fail_on_unmatched_files: true
+                  files: |
+                      downloads/*
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+
+            - name: Commit link progress only
+              if: steps.count.outputs.count != '0'
+              run: |
+                  set -euo pipefail
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add links.txt
+                  if git diff --cached --quiet; then
+                    echo "No links.txt changes to commit."
+                    exit 0
+                  fi
+                  git commit -m "Update links.txt after Telegram download"
+                  git push
